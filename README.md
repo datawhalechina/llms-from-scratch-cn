@@ -2,6 +2,29 @@
 
 GitHub上的"rasbt/LLMs-from-scratch"项目是一个关于如何从头开始实现类似ChatGPT的大语言模型（LLM）的教程。这个项目包含了编码、预训练和微调GPT-like LLM的代码，并且是《Build a Large Language Model (From Scratch)》这本书的官方代码库。书中详细介绍了LLM的内部工作原理，并逐步指导读者创建自己的LLM，包括每个阶段的清晰文本、图表和示例。这种方法用于训练和开发自己的小型但功能性的模型，用于教育目的，与创建大型基础模型（如ChatGPT背后的模型）的方法相似，翻译后的版本可以服务于国内的开发者。
 
+| 章节标题                                        | 主要代码（快速访问）                                                                                                           | 所有代码 + 补充           |
+|------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------|-------------------------------|
+| 第1章: 理解大型语言模型                       | 没有代码                                                                                                                        | 没有代码                      |
+| 第2章: 处理文本数据                            | - [ch02.ipynb](ch02/01_main-chapter-code/ch02.ipynb)<br/>- [dataloader.ipynb](ch02/01_main-chapter-code/dataloader.ipynb) (摘要)<br/>- [exercise-solutions.ipynb](ch02/01_main-chapter-code/exercise-solutions.ipynb) | [./ch02](./ch02)              |
+| 第3章: 编写注意力机制                          | - [ch03.ipynb](ch03/01_main-chapter-code/ch03.ipynb)<br/>- [multihead-attention.ipynb](ch03/01_main-chapter-code/multihead-attention.ipynb) (摘要) <br/>- [exercise-solutions.ipynb](ch03/01_main-chapter-code/exercise-solutions.ipynb)| [./ch03](./ch03)              |
+| 第4章: 从零开始实现GPT模型                     | - [ch04.ipynb](ch04/01_main-chapter-code/ch04.ipynb)<br/>- [gpt.py](ch04/01_main-chapter-code/gpt.py) (摘要)<br/>- [exercise-solutions.ipynb](ch04/01_main-chapter-code/exercise-solutions.ipynb) | [./ch04](./ch04)           |
+| 第5章: 使用未标记数据进行预训练               | 2024年第1季度                                                                                                                  | ...                           |
+| 第6章: 用于文本分类的微调                     | 2024年第2季度                                                                                                                  | ...                           |
+| 第7章: 使用人类反馈进行微调                   | 2024年第2季度                                                                                                                  | ...                           |
+| 第8章: 在实践中使用大型语言模型               | 2024年第2/3季度                                                                                                                | ...                           |
+| 附录A: PyTorch简介*                            | - [code-part1.ipynb](appendix-A/03_main-chapter-code/code-part1.ipynb)<br/>- [code-part2.ipynb](appendix-A/03_main-chapter-code/code-part2.ipynb)<br/>- [DDP-script.py](appendix-A/03_main-chapter-code/DDP-script.py)<br/>- [exercise-solutions.ipynb](appendix-A/03_main-chapter-code/exercise-solutions.ipynb) | [./appendix-A](./appendix-A) |
+
+（* 如果您需要关于安装Python和Python包的更多指导，请参阅[此](appendix-A/01_optional-python-setup-preferences)和[此](appendix-A/02_installing-python-libraries)文件夹。）
+
+
+
+<br>
+<br>
+
+<img src="images/mental-model.jpg" width="600px">
+
+（这是一个总结了本书内容的思维导图。）
+
 - 项目受众
     - 技术背景：该项目适合有一定编程基础的人员，特别是对大型语言模型（LLM）感兴趣的开发者和研究者。
     - 学习目标：适合那些希望深入了解LLM工作原理，并愿意投入时间从零开始构建和训练自己的LLM的学习者。
