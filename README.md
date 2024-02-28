@@ -14,7 +14,7 @@ GitHub上的"rasbt/LLMs-from-scratch"项目是一个关于如何从头开始实�
 | 第8章: 在实践中使用大型语言模型               | 2024年第2/3季度                                                                                                                | ...                           |
 | 附录A: PyTorch简介*                            | - [code-part1.ipynb](appendix-A/03_main-chapter-code/code-part1.ipynb)<br/>- [code-part2.ipynb](appendix-A/03_main-chapter-code/code-part2.ipynb)<br/>- [DDP-script.py](appendix-A/03_main-chapter-code/DDP-script.py)<br/>- [exercise-solutions.ipynb](appendix-A/03_main-chapter-code/exercise-solutions.ipynb) | [./appendix-A](./appendix-A) |
 
-（* 如果您需要关于安装Python和Python包的更多指导，请参阅[此](appendix-A/01_optional-python-setup-preferences)和[此](appendix-A/02_installing-python-libraries)文件夹。）
+（* 如果您需要关于安装Python和Python包的更多指导，请参阅[附录1](appendix-A/01_optional-python-setup-preferences)和[附录2](appendix-A/02_installing-python-libraries)文件夹。）
 
 
 
