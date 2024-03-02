@@ -13,7 +13,7 @@
 [![Code License](https://img.shields.io/badge/Code%20License-Apache_2.0-brightgreen.svg)](https://github.com/datawhalechina/llms-from-scratch-cn/blob/main/LICENSE.txt)
 
 
-GitHub上的"rasbt/LLMs-from-scratch"项目是一个关于如何从头开始实现类似ChatGPT的大语言模型（LLM）的教程。这个项目包含了编码、预训练和微调GPT-like LLM的代码，并且是《Build a Large Language Model (From Scratch)》这本书的官方代码库。书中详细介绍了LLM的内部工作原理，并逐步指导读者创建自己的LLM，包括每个阶段的清晰文本、图表和示例。这种方法用于训练和开发自己的小型但功能性的模型，用于教育目的，与创建大型基础模型（如ChatGPT背后的模型）的方法相似，翻译后的版本可以服务于国内的开发者。
+🤗GitHub上的"rasbt/LLMs-from-scratch"项目是一个关于如何从头开始实现类似ChatGPT的大语言模型（LLM）的教程。这个项目包含了编码、预训练和微调GPT-like LLM的代码，并且是《Build a Large Language Model (From Scratch)》这本书的官方代码库。书中详细介绍了LLM的内部工作原理，并逐步指导读者创建自己的LLM，包括每个阶段的清晰文本、图表和示例。这种方法用于训练和开发自己的小型但功能性的模型，用于教育目的，与创建大型基础模型（如ChatGPT背后的模型）的方法相似，翻译后的版本可以服务于国内的开发者。🎉
 
 | 章节标题                                        | 主要代码（快速访问）                                                                                                           | 所有代码 + 补充           |
 |------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------|-------------------------------|
