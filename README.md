@@ -2,17 +2,14 @@
 
 # 动手实现LLM中文版
 
-# Implementing LLM Hands-on: Building Your Own Large Language Model from Scratch
+# LLMs From Scratch: Hands-on Building Your Own Large Language Models
 
 </center>
 
 
 [![GitHub stars](https://img.shields.io/github/stars/datawhalechina/llms-from-scratch-cn.svg?style=social)](https://github.com/datawhalechina/llms-from-scratch-cn)
-
 [![GitHub forks](https://img.shields.io/github/forks/datawhalechina/llms-from-scratch-cn.svg?style=social)](https://github.com/datawhalechina/llms-from-scratch-cn)
-
 [![GitHub issues](https://img.shields.io/github/issues/datawhalechina/llms-from-scratch-cn.svg)](https://github.com/datawhalechina/llms-from-scratch-cn/issues)
-
 [![Code License](https://img.shields.io/badge/Code%20License-Apache_2.0-brightgreen.svg)](https://github.com/datawhalechina/llms-from-scratch-cn/blob/main/LICENSE.txt)
 
 
