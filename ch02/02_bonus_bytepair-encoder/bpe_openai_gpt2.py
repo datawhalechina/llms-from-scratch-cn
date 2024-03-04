@@ -41,6 +41,7 @@ import requests
 from tqdm import tqdm
 from functools import lru_cache
 
+# # 定义一个函数将字节转换为Unicode字符
 @lru_cache()
 def bytes_to_unicode():
     """
@@ -52,6 +53,15 @@ def bytes_to_unicode():
     To avoid that, we want lookup tables between utf-8 bytes and unicode strings.
     And avoids mapping to whitespace/control characters the bpe code barfs on.
     """
+    '''
+    返回一组UTF-8字节和相应的Unicode字符串列表。
+    可逆的BPE编码适用于Unicode字符串。
+    这意味着如果想要避免UNK（未知标记），则需要在词汇表中包含大量的Unicode字符。
+    当处理大约100亿标记的数据集时，最终需要大约5000个字符以确保良好的覆盖率。
+    这相当于正常情况下使用的32,000个BPE词汇表的显著比例。
+    为了避免这种情况，我们希望在UTF-8字节和Unicode字符串之间建立查找表。
+    并且要避免将BPE代码映射到空格/控制字符上，以免出现问题。
+    '''
     bs = list(range(ord("!"), ord("~")+1))+list(range(ord("¡"), ord("¬")+1))+list(range(ord("®"), ord("ÿ")+1))
     cs = bs[:]
     n = 0
@@ -63,11 +73,16 @@ def bytes_to_unicode():
     cs = [chr(n) for n in cs]
     return dict(zip(bs, cs))
 
+# 定义一个函数获取单词中的符号对
 def get_pairs(word):
     """Return set of symbol pairs in a word.
 
     Word is represented as tuple of symbols (symbols being variable-length strings).
     """
+    '''
+    返回单词中的符号对集合。
+    单词以符号元组的形式表示（其中符号是可变长度的字符串）。
+    '''
     pairs = set()
     prev_char = word[0]
     for char in word[1:]:
@@ -75,8 +90,10 @@ def get_pairs(word):
         prev_char = char
     return pairs
 
+# 定义一个使用字节对编码（BPE）进行编码和解码的Encoder类
 class Encoder:
     def __init__(self, encoder, bpe_merges, errors='replace'):
+        #  # 使用编码器字典、BPE合并和错误处理策略初始化Encoder
         self.encoder = encoder
         self.decoder = {v:k for k,v in self.encoder.items()}
         self.errors = errors # how to handle errors in decoding
@@ -89,6 +106,7 @@ class Encoder:
         self.pat = re.compile(r"""'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+""")
 
     def bpe(self, token):
+        # 对给定的标记执行字节对编码
         if token in self.cache:
             return self.cache[token]
         word = tuple(token)
@@ -130,6 +148,7 @@ class Encoder:
         return word
 
     def encode(self, text):
+        # 使用BPE对给定文本进行编码
         bpe_tokens = []
         for token in re.findall(self.pat, text):
             token = ''.join(self.byte_encoder[b] for b in token.encode('utf-8'))
@@ -137,10 +156,11 @@ class Encoder:
         return bpe_tokens
 
     def decode(self, tokens):
+         # 将一系列标记解码回文本
         text = ''.join([self.decoder[token] for token in tokens])
         text = bytearray([self.byte_decoder[c] for c in text]).decode('utf-8', errors=self.errors)
         return text
-
+# 定义一个函数获取特定模型的编码器
 def get_encoder(model_name, models_dir):
     with open(os.path.join(models_dir, model_name, 'encoder.json'), 'r') as f:
         encoder = json.load(f)
@@ -152,7 +172,7 @@ def get_encoder(model_name, models_dir):
         bpe_merges=bpe_merges,
     )
 
-
+# 定义一个函数下载GPT-2模型的词汇文件
 def download_vocab():
     # Modified code from
     subdir = 'gpt2_model'
