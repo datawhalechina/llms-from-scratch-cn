@@ -165,6 +165,7 @@ gpt2/
 # Ignore specific text file
 *.pdf
 *.pth
+.vscode/
 
 
 # PyCharm
