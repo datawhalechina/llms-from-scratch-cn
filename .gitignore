@@ -156,6 +156,18 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
+# chapter 5 .gitignore
+
+# Ignore BPE vocabulary file
+vocab.bpe
+# model相关文件
+gpt2/
+# Ignore specific text file
+*.pdf
+*.pth
+.vscode/
+
+
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
 #  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
