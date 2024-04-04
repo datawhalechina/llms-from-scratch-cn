@@ -35,11 +35,15 @@
 | 第2章: 处理文本数据                            | - [ch02.ipynb](ch02/01_main-chapter-code/ch02.ipynb)<br/>- [dataloader.ipynb](ch02/01_main-chapter-code/dataloader.ipynb) (摘要)<br/>- [exercise-solutions.ipynb](ch02/01_main-chapter-code/exercise-solutions.ipynb) | [./ch02](./ch02)              |
 | 第3章: 编写注意力机制                          | - [ch03.ipynb](ch03/01_main-chapter-code/ch03.ipynb)<br/>- [multihead-attention.ipynb](ch03/01_main-chapter-code/multihead-attention.ipynb) (摘要) <br/>- [exercise-solutions.ipynb](ch03/01_main-chapter-code/exercise-solutions.ipynb)| [./ch03](./ch03)              |
 | 第4章: 从零开始实现GPT模型                     | - [ch04.ipynb](ch04/01_main-chapter-code/ch04.ipynb)<br/>- [gpt.py](ch04/01_main-chapter-code/gpt.py) (摘要)<br/>- [exercise-solutions.ipynb](ch04/01_main-chapter-code/exercise-solutions.ipynb) | [./ch04](./ch04)           |
-| 第5章: 使用未标记数据进行预训练               | 2024年第1季度                                                                                                                  | ...                           |
+| 第5章: 使用未标记数据进行预训练               |  - [ch05.ipynb](ch05/01_main-chapter-code/ch05.ipynb)<br/>- [train.py](ch05/01_main-chapter-code/train.py) (摘要) <br/>- [generate.py](ch05/01_main-chapter-code/generate.py) (摘要) <br/>- [exercise-solutions.ipynb](ch05/01_main-chapter-code/exercise-solutions.ipynb) | [./ch05](./ch05)                                                                    | ...                           |
 | 第6章: 用于文本分类的微调                     | 2024年第2季度                                                                                                                  | ...                           |
 | 第7章: 使用人类反馈进行微调                   | 2024年第2季度                                                                                                                  | ...                           |
 | 第8章: 在实践中使用大型语言模型               | 2024年第2/3季度                                                                                                                | ...                           |
 | 附录A: PyTorch简介*                            | - [code-part1.ipynb](appendix-A/03_main-chapter-code/code-part1.ipynb)<br/>- [code-part2.ipynb](appendix-A/03_main-chapter-code/code-part2.ipynb)<br/>- [DDP-script.py](appendix-A/03_main-chapter-code/DDP-script.py)<br/>- [exercise-solutions.ipynb](appendix-A/03_main-chapter-code/exercise-solutions.ipynb) | [./appendix-A](./appendix-A) |
+| Appendix B: 参考文献和进一步的阅读材料                 | 没有代码                                                                                                                         | -                             |
+| Appendix C: 练习                                     | 没有代码                                                                                                                        | -                             |
+| Appendix D: 为训练过程添加额外的功能和特性 | - [appendix-D.ipynb](appendix-D/01_main-chapter-code/appendix-D.ipynb)                                                          | [./appendix-D](./appendix-D)  |
+|<br>|||
 
 （* 如果您需要关于安装Python和Python包的更多指导，请参阅[附录1](appendix-A/01_optional-python-setup-preferences)和[附录2](appendix-A/02_installing-python-libraries)文件夹。）
 
@@ -85,6 +89,7 @@
 | 邹雨衡 | 第3章贡献者 |              ||
 | 陈嘉诺 | 第4章贡献者 |              ||
 | 高立业 | 第4章贡献者 |              |[@Tangent-90C](https://github.com/Tangent-90C)|
+| 丁悦 | 第5章贡献者 | 哈尔滨工业大学（威海）|[@dingyue772](https://github.com/dingyue772)|
 | 周景林 | 附录贡献者  |              |[@Beyondzjl](https://github.com/Beyondzjl)|
 | 陈可为 | 附录贡献者  |              |[@Ethan-Chen-plus](https://github.com/Ethan-Chen-plus)|
 
