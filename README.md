@@ -87,8 +87,8 @@
 | 汪健麟 | 第2章贡献者 |              ||
 | 张友东 | 第3章贡献者 |              ||
 | 邹雨衡 | 第3章贡献者 |              ||
-| 陈嘉诺 | 第4章贡献者 |              ||
-| 高立业 | 第4章贡献者 |              |[@Tangent-90C](https://github.com/Tangent-90C)|
+| 陈嘉诺 | 第4章贡献者 |   广州大学    |[@Tangent-90C](https://github.com/Tangent-90C)|
+| 高立业 | 第4章贡献者 |              ||
 | 丁悦 | 第5章贡献者 | 哈尔滨工业大学（威海）|[@dingyue772](https://github.com/dingyue772)|
 | 周景林 | 附录贡献者  |              |[@Beyondzjl](https://github.com/Beyondzjl)|
 | 陈可为 | 附录贡献者  |              |[@Ethan-Chen-plus](https://github.com/Ethan-Chen-plus)|
