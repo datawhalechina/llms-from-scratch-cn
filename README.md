@@ -85,6 +85,8 @@
 | 陈可为 | 项目负责人  | 华中科技大学 |[@Ethan-Chen-plus](https://github.com/Ethan-Chen-plus)|
 | 王训志 | 第2章贡献者 | 南开大学     |[@aJupyter](https://github.com/aJupyter)|
 | 汪健麟 | 第2章贡献者 |              ||
+| Aria  | 第2章贡献者 |             |[@ariafyy](https://github.com/ariafyy)|
+| 汪健麟 | 第2章贡献者 |              ||
 | 张友东 | 第3章贡献者 |              ||
 | 邹雨衡 | 第3章贡献者 |              ||
 | 陈嘉诺 | 第4章贡献者 |   广州大学    |[@Tangent-90C](https://github.com/Tangent-90C)|
