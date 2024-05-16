@@ -89,6 +89,7 @@
 | 汪健麟 | 第2章贡献者 |              ||
 | 张友东 | 第3章贡献者 |              ||
 | 邹雨衡 | 第3章贡献者 |              ||
+| 曹 妍  | 第3章贡献者 |              |[@SamanthaTso](https://github.com/SamanthaTso)|
 | 陈嘉诺 | 第4章贡献者 |   广州大学    |[@Tangent-90C](https://github.com/Tangent-90C)|
 | 高立业 | 第4章贡献者 |              ||
 | 蒋文力 | 第4章贡献者 |              |[@morcake](https://github.com/morcake)|
