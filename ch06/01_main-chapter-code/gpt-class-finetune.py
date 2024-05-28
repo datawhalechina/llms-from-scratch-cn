@@ -21,15 +21,34 @@ from gpt_download import download_and_load_gpt2
 from previous_chapters import GPTModel, load_weights_into_gpt
 
 
-def download_and_unzip_spam_data(url, zip_path, extracted_path, data_file_path):
+def download_and_unzip_spam_data(url, zip_path, extracted_path, data_file_path, test_mode=False):
     if data_file_path.exists():
         print(f"{data_file_path} already exists. Skipping download and extraction.")
         return
 
-    # Downloading the file
-    with urllib.request.urlopen(url) as response:
-        with open(zip_path, "wb") as out_file:
-            out_file.write(response.read())
+    if test_mode:  # Try multiple times since CI sometimes has connectivity issues
+        max_retries = 5
+        delay = 5  # delay between retries in seconds
+        for attempt in range(max_retries):
+            try:
+                # Downloading the file
+                with urllib.request.urlopen(url, timeout=10) as response:
+                    with open(zip_path, "wb") as out_file:
+                        out_file.write(response.read())
+                break  # if download is successful, break out of the loop
+            except urllib.error.URLError as e:
+                print(f"Attempt {attempt + 1} failed: {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(delay)  # wait before retrying
+                else:
+                    print("Failed to download file after several attempts.")
+                    return  # exit if all retries fail
+
+    else:  # Code as it appears in the chapter
+        # Downloading the file
+        with urllib.request.urlopen(url) as response:
+            with open(zip_path, "wb") as out_file:
+                out_file.write(response.read())
 
     # Unzipping the file
     with zipfile.ZipFile(zip_path, "r") as zip_ref:
@@ -238,6 +257,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--test_mode",
+        default=False,
         action="store_true",
         help=("This flag runs the model in test mode for internal testing purposes. "
               "Otherwise, it runs the model as it is used in the chapter (recommended).")
@@ -253,7 +273,7 @@ if __name__ == "__main__":
     extracted_path = "sms_spam_collection"
     data_file_path = Path(extracted_path) / "SMSSpamCollection.tsv"
 
-    download_and_unzip_spam_data(url, zip_path, extracted_path, data_file_path)
+    download_and_unzip_spam_data(url, zip_path, extracted_path, data_file_path, test_mode=args.test_mode)
     df = pd.read_csv(data_file_path, sep="\t", header=None, names=["Label", "Text"])
     balanced_df = create_balanced_dataset(df)
     balanced_df["Label"] = balanced_df["Label"].map({"ham": 0, "spam": 1})
@@ -330,9 +350,7 @@ if __name__ == "__main__":
         }
         model = GPTModel(BASE_CONFIG)
         model.eval()
-
         device = "cpu"
-        model.to(device)
 
     # Code as it is used in the main chapter
     else:
@@ -355,15 +373,18 @@ if __name__ == "__main__":
 
         BASE_CONFIG.update(model_configs[CHOOSE_MODEL])
 
+        assert train_dataset.max_length <= BASE_CONFIG["context_length"], (
+            f"Dataset length {train_dataset.max_length} exceeds model's context "
+            f"length {BASE_CONFIG['context_length']}. Reinitialize data sets with "
+            f"`max_length={BASE_CONFIG['context_length']}`"
+        )
+
         model_size = CHOOSE_MODEL.split(" ")[-1].lstrip("(").rstrip(")")
         settings, params = download_and_load_gpt2(model_size=model_size, models_dir="gpt2")
 
         model = GPTModel(BASE_CONFIG)
         load_weights_into_gpt(model, params)
-        model.eval()
-
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        model.to(device)
 
     ########################################
     # Modify and pretrained model
@@ -376,6 +397,7 @@ if __name__ == "__main__":
 
     num_classes = 2
     model.out_head = torch.nn.Linear(in_features=BASE_CONFIG["emb_dim"], out_features=num_classes)
+    model.to(device)
 
     for param in model.trf_blocks[-1].parameters():
         param.requires_grad = True
