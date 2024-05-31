@@ -1,18 +1,16 @@
-## mamba-minimal
+Mamba在一个PyTorch文件中的简单、极简实现。
 
-Simple, minimal implementation of Mamba in one file of PyTorch.
+特点：
+* 与官方实现的前向和后向传递具有相同的数值输出
+* 简化的、可读的、带注释的代码
 
-Featuring:
-* Equivalent numerical output as official implementation for both forward and backward pass
-* Simplified, readable, annotated code
+不包括：
+* 速度。官方实现经过大量优化，这些优化是Mamba论文的核心贡献之一。为了可读性将大部分实现保持简单。
+* 正确的参数初始化（尽管可以在不牺牲可读性的情况下添加）
 
-Does NOT include:
-* Speed. The official implementation is heavily optimized, and these optimizations are core contributions of the Mamba paper. I kept most implementations simple for readability.
-* Proper parameter initialization (though this could be added without sacrificing readability)
+## 演示
 
-## Demo
-
-See [demo.ipynb](demo.ipynb) for examples of prompt completions.
+参见[demo.ipynb](demo.ipynb)以获取提示完成的示例。
 
 ```python
 from model import Mamba
@@ -23,12 +21,12 @@ tokenizer = AutoTokenizer.from_pretrained('EleutherAI/gpt-neox-20b')
 
 generate(model, tokenizer, 'Mamba is the')
 ```
-> Mamba is the world's longest venomous snake with an estimated length of over 150 m. With such a large size and a venomous bite, Mamba kills by stabbing the victim (which is more painful and less effective than a single stab of the bite)
+> Mamba 是世界上最长的毒蛇，估计长度超过150米。由于其巨大的体型和剧毒的咬合力，Mamba通过刺伤受害者来杀人（这比单次咬合的刺痛感更强，但效果更差）
 
-150 meters... 🫢 scary!
+150米……🫢 可怕！
 
-## References
+## 参考资料
 
-The Mamba architecture was introduced in [Mamba: Linear-Time Sequence Modeling with Selective State Spaces](https://arxiv.org/abs/2312.00752) by [Albert Gu](https://twitter.com/_albertgu?lang=en) and [Tri Dao](https://twitter.com/tri_dao?ref_src=twsrc%5Egoogle%7Ctwcamp%5Eserp%7Ctwgr%5Eauthor).
+Mamba架构由[Albert Gu](https://twitter.com/_albertgu?lang=en)和[Tri Dao](https://twitter.com/tri_dao?ref_src=twsrc%5Egoogle%7Ctwcamp%5Eserp%7Ctwgr%5Eauthor)在[Mamba: Linear-Time Sequence Modeling with Selective State Spaces](https://arxiv.org/abs/2312.00752)中提出。
 
-The official implementation is here: https://github.com/state-spaces/mamba/tree/main
+官方实现见此处: https://github.com/state-spaces/mamba/tree/main
