@@ -258,7 +258,7 @@ class RWKV_RNN():
         w = self.w
         x = w.emb.weight[ctx[-1]]
 
-        x = self.LN(x, w.blocks[0].ln0)
+        x = self.LN(x, w.blocks[0].ln0) #相比v2版本，增加了一个初始的归一化
         for i in range(n_layer):
             x = x + self.SA(self.LN(x, w.blocks[i].ln1), w.blocks[i].att, f'att.{i}')
             x = x + self.FF(self.LN(x, w.blocks[i].ln2), w.blocks[i].ffn, f'ffn.{i}')
