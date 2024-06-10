@@ -71,8 +71,7 @@
 ---
 
 
-
-### 2. 模型架构的讨论和搭建
+### （2）模型架构的讨论和搭建
 
 - **支持多种大型模型**: 项目涵盖了 ChatGLM、Llama、RWKV 等多个大型模型的架构讨论与实现，详见 `./Model_Architecture_Discussions` 目录。
 - **架构详细解析**: 包括每个模型的配置文件、训练脚本和核心代码，帮助学习者深入理解不同模型的内部机制。
@@ -87,7 +86,7 @@
 | RWKV V4 | [rwkv-v4.ipynb](./Model_Architecture_Discussions/rwkv-v4/rwkv-v4-guide.ipynb) | [@Ethan-Chen-plus](https://github.com/Ethan-Chen-plus) |
 | RWKV V5 | [rwkv-v5.ipynb](./Model_Architecture_Discussions/rwkv-v5/rwkv-v5-guide.ipynb) | [@Ethan-Chen-plus](https://github.com/Ethan-Chen-plus) |
 | RWKV V6 | [rwkv-v6.ipynb](./Model_Architecture_Discussions/rwkv-v6/rwkv-v6-guide.ipynb) | [@Ethan-Chen-plus](https://github.com/Ethan-Chen-plus) |
-| ChatGLM4 | [rwkv-v3.ipynb](./Model_Architecture_Discussions/ChatGLM4/chatglm4-guide.ipynb) | [@Ethan-Chen-plus](https://github.com/Ethan-Chen-plus) |
+| ChatGLM4 | [chatglm4.ipynb](./Model_Architecture_Discussions/ChatGLM4/chatglm4-guide.ipynb) | [@Ethan-Chen-plus](https://github.com/Ethan-Chen-plus) |
 
 
 ---
