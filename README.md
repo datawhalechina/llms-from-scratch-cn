@@ -1,8 +1,9 @@
 <center>
 
-# 动手实现LLM中文版
+# 动手学LLM
 
 # LLMs From Scratch: Hands-on Building Your Own Large Language Models
+
 
 </center>
 
@@ -17,8 +18,13 @@
 ---
 
 ## 📘 项目介绍
+如果你想从0手写代码，构建大语言模型，本项目很适合你。
+本项目 "LLMs From Scratch" 是由 Datawhale 提供的一个从头开始构建类似 ChatGPT 大型语言模型（LLM）的实践教程。
+我们旨在通过详细的指导、代码示例和深度学习资源，帮助开发者和研究者掌握创建大语言模型和大语言模型架构的核心技术。
+本项目包括了从0逐步构建GLM4\Llama3\RWKV6的教程，从0构建大模型，一起深入理解大模型原理。
 
-本项目 "LLMs From Scratch" 是由 Datawhale 提供的一个从头开始构建类似 ChatGPT 大型语言模型（LLM）的实践教程。我们旨在通过详细的指导、代码示例和深度学习资源，帮助开发者和研究者掌握创建大语言模型和大语言模型架构的核心技术。
+![image](https://github.com/datawhalechina/llms-from-scratch-cn/assets/84905965/11e1e396-e528-46a0-8e07-57ba513eac63)
+
 
 ---
 
