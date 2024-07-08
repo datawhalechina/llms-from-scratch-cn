@@ -3,13 +3,9 @@
     "architectures": [
         "MiniCPMForCausalLM"
     ],
-    "auto_map": {
-        "AutoConfig": "configuration_minicpm.MiniCPMConfig",
-        "AutoModel": "modeling_minicpm.MiniCPMModel",
-        "AutoModelForCausalLM": "modeling_minicpm.MiniCPMForCausalLM",
-        "AutoModelForSeq2SeqLM": "modeling_minicpm.MiniCPMForCausalLM",
-        "AutoModelForSequenceClassification": "modeling_minicpm.MiniCPMForSequenceClassification"
-    },
+    "do_sample": true,
+    "top_p": 0.8,
+    "temperature": 0.8,
     "bos_token_id": 1,
     "eos_token_id": 2,
     "hidden_act": "silu",
