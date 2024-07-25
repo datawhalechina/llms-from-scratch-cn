@@ -1,27 +1,30 @@
 import math
 import warnings
 from typing import List, Optional, Tuple, Union, Dict
-from collections import OrderedDict, UserDict
+from collections import OrderedDict
 
 import torch
 import torch.nn.functional as F
-import torch.utils.checkpoint
 from torch import nn
-from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+from torch.nn import CrossEntropyLoss
 import re
+from dataclasses import dataclass
+
 
 import logging
 from configuration_minicpm import MiniCPMConfig  # 直接导入
 
 logger = logging.getLogger(__name__)
 
+
+@dataclass
 class BaseModelOutputWithPast(OrderedDict):
     last_hidden_state: torch.FloatTensor = None
     past_key_values: Optional[Tuple[Tuple[torch.FloatTensor]]] = None
     hidden_states: Optional[Tuple[torch.FloatTensor, ...]] = None
     attentions: Optional[Tuple[torch.FloatTensor, ...]] = None
     
-  
+@dataclass
 class CausalLMOutputWithPast(OrderedDict):
     loss: Optional[torch.FloatTensor] = None
     logits: torch.FloatTensor = None
@@ -41,9 +44,8 @@ class MiniCPMRotaryEmbedding(nn.Module):
         inv_freq = 1.0 / (self.base ** (torch.arange(0, self.dim, 2).float().to(device) / self.dim))
         self.register_buffer("inv_freq", inv_freq, persistent=False)
 
-        # Build here to make `torch.jit.trace` work.
+        # 构建缓存
         self._set_cos_sin_cache(
-            # seq_len=max_position_embeddings, device=self.inv_freq.device, dtype=torch.get_default_dtype()
             seq_len=max_position_embeddings, device=self.inv_freq.device, dtype=torch.float32
         )
 
@@ -52,44 +54,103 @@ class MiniCPMRotaryEmbedding(nn.Module):
         self.max_seq_len_cached = seq_len
         t = torch.arange(self.max_seq_len_cached, device=device, dtype=self.inv_freq.dtype)
         freqs = torch.outer(t, self.inv_freq)
-        # Different from paper, but it uses a different permutation in order to obtain the same calculation
+
+        # 将频率扩展到维度上
         emb = torch.cat((freqs, freqs), dim=-1)
 
+        # 缓存余弦值和正弦值
         self.register_buffer("cos_cached", emb.cos().to(dtype), persistent=False)
         self.register_buffer("sin_cached", emb.sin().to(dtype), persistent=False)
 
     def forward(self, x, seq_len=None):
-        # 首先检查输入序列的长度是否超过了缓存的最大长度，如果超过了，则重新计算并缓存余弦和正弦值。然后，返回对应序列长度的余弦和正弦值。
+        # 首先检查输入序列的长度是否超过了缓存的最大长度，如果超过了，则重新计算并缓存余弦和正弦值
         # x: [bs, num_attention_heads, seq_len, head_size]
         if seq_len > self.max_seq_len_cached:
             self._set_cos_sin_cache(seq_len=seq_len, device=x.device, dtype=x.dtype)
 
+        # 返回对应序列长度的余弦和正弦值
         return (
             self.cos_cached[:seq_len].to(dtype=x.dtype),
             self.sin_cached[:seq_len].to(dtype=x.dtype),
         )
         
 def rotate_half(x):
-    """旋转输入的隐藏维度的一半。"""
+    # 将输入张量 x 沿 emb 维度一分为二
     x1 = x[..., : x.shape[-1] // 2]
     x2 = x[..., x.shape[-1] // 2 :]
+    # 将后半部分取负号，然后与前半部分拼接，对输入张量的隐藏维度进行旋转
     return torch.cat((-x2, x1), dim=-1)
 
 
 def apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim=1):
-    orig_dtype = k.dtype # torch.bfloat16
+    # 保存原始数据类型
+    orig_dtype = k.dtype  # torch.bfloat16
+    
+    # 根据 position_ids 选择 cos 和 sin，并在指定维度上扩展
     cos = cos[position_ids].unsqueeze(unsqueeze_dim)  # [bs, 1, seq_len, dim] 便于和[bs, num_heads, q_len, head_dim] 维度的 q,k 进行矩阵乘法
     sin = sin[position_ids].unsqueeze(unsqueeze_dim)  # [bs, 1, seq_len, dim]
+    
+    # 将 q 和 k 转换为 float32 类型，以便进行精确的计算
     q_fp32 = q.to(dtype=torch.float32, device=q.device)
     k_fp32 = k.to(dtype=torch.float32, device=k.device)
+    
+    # 计算 q 和 k 的旋转位置嵌入
     q_embed = (q_fp32 * cos) + (rotate_half(q_fp32) * sin)
     k_embed = (k_fp32 * cos) + (rotate_half(k_fp32) * sin)
-    return q_embed.to(dtype=orig_dtype), k_embed.to(dtype=orig_dtype) # [bs, num_heads, q_len, head_dim]
+    
+    # 将结果转换回原始数据类型并返回
+    return q_embed.to(dtype=orig_dtype), k_embed.to(dtype=orig_dtype)  # [bs, num_heads, q_len, head_dim]
 
+
+def create_causal_mask(input_shape, dtype, device, past_length=0):
+    batch_size, query_length = input_shape
+    # 创建一个上三角矩阵，填充最小浮点值，表示未来的token不能看到
+    causal_mask = torch.triu(torch.full((query_length, query_length), torch.finfo(dtype).min, dtype=dtype, device=device), diagonal=1)
+    # 如果有过去的key-value长度，则在mask前面添加零矩阵
+    if past_length > 0:
+        causal_mask = torch.cat([torch.zeros(query_length, past_length, dtype=dtype, device=device), causal_mask], dim=-1)
+    # 扩展mask的维度以匹配批次大小，并返回
+    return causal_mask[None, None, :, :].expand(batch_size, 1, query_length, query_length + past_length)
+
+def expand_attention_mask(mask, dtype, target_length = None):
+    batch_size, source_length = mask.shape
+    target_length = target_length if target_length is not None else source_length
+
+    # 扩展mask的维度以匹配目标长度和批次大小
+    expanded_mask = mask[:, None, None, :].expand(batch_size, 1, target_length, source_length).to(dtype)
+    # 反转mask，将1变为0，0变为1
+    inverted_mask = 1.0 - expanded_mask
+    # 将反转后的mask中为True的位置填充为最小浮点值
+    return inverted_mask.masked_fill(inverted_mask.bool(), torch.finfo(dtype).min)
+
+def prepare_4d_causal_attention_mask(
+    attention_mask: Optional[torch.Tensor],
+    query_length: int,
+    past_length: int,
+    dtype: torch.dtype,
+    device: Union[torch.device, "str"] = "cpu",
+):
+
+    # 如果attention_mask存在且是2维的
+    if attention_mask is not None and attention_mask.dim() == 2:
+        # 获取批次大小和查询长度
+        batch_size = attention_mask.shape[0]
+        query_length = query_length
+        # 更新input_shape和past_length
+        input_shape = (batch_size, query_length)
+        causal_mask = None
+        if query_length > 1:
+            # 创建4维的causal mask
+            causal_mask = create_causal_mask(input_shape, dtype, device, past_length)
+        # 扩展attention mask
+        expanded_mask = expand_attention_mask(attention_mask, dtype, query_length)
+        if causal_mask is not None:
+            # 将causal mask中对应expanded mask为True的位置填充为最小浮点值
+            expanded_attn_mask = causal_mask.masked_fill(expanded_mask.bool(), torch.finfo(dtype).min)
+        expanded_attn_mask = expanded_mask
+    return expanded_attn_mask
 
 class MiniCPMAttention(nn.Module):
-    """Multi-headed attention from 'Attention Is All You Need' paper"""
-
     def __init__(self, config: MiniCPMConfig, layer_idx: Optional[int] = None):
         super().__init__()
         self.config = config
@@ -117,7 +178,7 @@ class MiniCPMAttention(nn.Module):
                 f" and `num_heads`: {self.num_heads})."
             )
 
-        self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=config.attention_bias)
+        self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=config.attention_bias) # (2304, 36*64=2304)
         self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
         self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
         self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=config.attention_bias)
@@ -130,9 +191,6 @@ class MiniCPMAttention(nn.Module):
             base=self.rope_theta,
         )
 
-    def _shape(self, tensor: torch.Tensor, seq_len: int, bsz: int):
-        return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2).contiguous()
-
     def forward(
         self,
         hidden_states: torch.Tensor,
@@ -143,10 +201,6 @@ class MiniCPMAttention(nn.Module):
         use_cache: bool = False,
         **kwargs,
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
-        if "padding_mask" in kwargs:
-            warnings.warn(
-                "Passing `padding_mask` is deprecated and will be removed in v4.37. Please make sure use `attention_mask` instead.`"
-            )
 
         bsz, q_len, _ = hidden_states.size()
 
@@ -161,26 +215,31 @@ class MiniCPMAttention(nn.Module):
         value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
 
         kv_seq_len = key_states.shape[-2]
-        if past_key_value is not None:
-            kv_seq_len += past_key_value[0][0].shape[0]
-        
-        # 获取 rope Embedding 对应的 cos 和 sin 值
+        if past_key_value is not None and len(past_key_value) > 0 and len(past_key_value[0]) > self.layer_idx and len(past_key_value[0][self.layer_idx].shape) > 1:
+            # 如果有 kv-cache 缓存，需要加上缓存的长度
+            kv_seq_len += past_key_value[0][self.layer_idx].shape[0] 
+            
+        # 获取 RoPE Embedding 对应位置的 cos 和 sin 值 （ 这里传入的 value_states 不会参与计算，只是确保类型和设备）
         cos, sin = self.rotary_emb(value_states.to(torch.float32), seq_len=kv_seq_len)
         
-        # 计算经过 RoPE 后的 q, k Emb 值
+        # 对 q 和 k 向量应用 RoPE 位置编码
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin, position_ids)
-
+        # 如果存在先前的 k-v 缓存
         if past_key_value is not None:
-            if len(past_key_value[0].shape) <= self.layer_idx:
-                self.key_cache.append(key_states)
-                self.value_cache.append(value_states)
+            # 若当前层缓存未初始化，则进行初始化
+            if len(past_key_value[0]) <= self.layer_idx:
+                # 为当前层新增 k-v 的缓存
+                past_key_value[0].append(key_states)
+                past_key_value[1].append(value_states)
             else:
-                self.key_cache[self.layer_idx] = torch.cat([self.key_cache[self.layer_idx], key_states], dim=-2)
-                self.value_cache[self.layer_idx] = torch.cat([self.value_cache[self.layer_idx], value_states], dim=-2)
+                # 若当前层缓存已存在，通过在序列长度维度上进行拼接更新缓存
+                past_key_value[0][self.layer_idx] = torch.cat([past_key_value[0][self.layer_idx], key_states], dim=-2)
+                past_key_value[1][self.layer_idx] = torch.cat([past_key_value[1][self.layer_idx], value_states], dim=-2)
 
-            key_states, value_states = self.key_cache[self.layer_idx], self.value_cache[self.layer_idx]            
-
+            key_states, value_states = past_key_value[0][self.layer_idx], past_key_value[1][self.layer_idx]   
+            
         attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
+        
         if attn_weights.size() != (bsz, self.num_heads, q_len, kv_seq_len):
             raise ValueError(
                 f"Attention weights should be of size {(bsz, self.num_heads, q_len, kv_seq_len)}, but is"
@@ -194,9 +253,9 @@ class MiniCPMAttention(nn.Module):
                 )
             attn_weights = attn_weights + attention_mask
 
-        # upcast attention to fp32
-        attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
-        attn_weights = nn.functional.dropout(attn_weights, p=self.attention_dropout, training=self.training)
+        # 使用32位浮点数精度以提高计算精度
+        attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
+        attn_weights = F.dropout(attn_weights, p=self.attention_dropout, training=self.training)
         attn_output = torch.matmul(attn_weights, value_states)
 
         if attn_output.size() != (bsz, self.num_heads, q_len, self.head_dim):
@@ -204,7 +263,7 @@ class MiniCPMAttention(nn.Module):
                 f"`attn_output` should be of size {(bsz, self.num_heads, q_len, self.head_dim)}, but is"
                 f" {attn_output.size()}"
             )
-
+            
         attn_output = attn_output.transpose(1, 2).contiguous()
 
         attn_output = attn_output.reshape(bsz, q_len, self.hidden_size)
@@ -216,23 +275,23 @@ class MiniCPMAttention(nn.Module):
         
         return attn_output, attn_weights, past_key_value
 
-
-def rms_layernorm(hidden: torch.Tensor, weight: torch.Tensor, eps: float):
-    old_dtype = hidden.dtype
-    variance = hidden.to(torch.float32).pow(2).mean(dim=-1, keepdim=True)
-    hidden = (hidden * torch.rsqrt(variance + eps)).to(old_dtype)
-    return hidden * weight
-
-
 class MiniCPMRMSNorm(nn.Module):
     def __init__(self, hidden_size, eps=1e-6):
         super().__init__()
-        self.weight = nn.Parameter(torch.ones(hidden_size))
+        # 初始化权重参数为1，形状由hidden_size决定
+        self.weight = nn.Parameter(torch.ones(hidden_size)) 
+        # 设置方差的epsilon值，防止除以0
         self.variance_epsilon = eps
 
     def forward(self, hidden_states):
-        return rms_layernorm(hidden_states, self.weight, self.variance_epsilon)
-    
+        # 保存输入的数据类型，以便后续恢复
+        old_dtype = hidden_states.dtype
+        # 计算方差，先转换数据类型以提高精度，然后计算平方的均值
+        variance = hidden_states.to(torch.float32).pow(2).mean(dim=-1, keepdim=True)
+        # 标准化隐藏状态，使用rsqrt（方差+epsilon的倒数根）进行缩放，并恢复原数据类型
+        hidden_states = (hidden_states * torch.rsqrt(variance + self.variance_epsilon)).to(old_dtype)
+        # 应用权重参数，进行缩放
+        return hidden_states * self.weight
     
 class MiniCPMMLP(nn.Module):
     def __init__(self, config):
@@ -245,7 +304,7 @@ class MiniCPMMLP(nn.Module):
         self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=False)
         self.act_fn = nn.SiLU()
 
-    def forward(self, x):    
+    def forward(self, x): 
         down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
         return down_proj
     
@@ -254,13 +313,6 @@ class MiniCPMPreTrainedModel(nn.Module):
         self.config = args[0]
 
         super().__init__()
-    base_model_prefix = "model"
-    supports_gradient_checkpointing = True
-    _no_split_modules = ["MiniCPMDecoderLayer"]
-    _skip_keys_device_placement = "past_key_values"
-    _supports_flash_attn_2 = True
-    _supports_sdpa = True
-    _supports_cache_class = True
 
     def _init_weights(self, module):
         std = self.config.initializer_range
@@ -299,8 +351,9 @@ class MiniCPMDecoderLayer(nn.Module):
     ) -> Tuple[torch.FloatTensor, Optional[Tuple[torch.FloatTensor, torch.FloatTensor]]]:
         
         residual = hidden_states
+        # 对输入归一化
         hidden_states = self.input_layernorm(hidden_states)
-        # Self Attention
+        # Self Attention 计算
         hidden_states, self_attn_weights, present_key_value = self.self_attn(
             hidden_states=hidden_states,
             attention_mask=attention_mask,
@@ -310,14 +363,15 @@ class MiniCPMDecoderLayer(nn.Module):
             use_cache=use_cache,
             **kwargs,
         )
-        
+        # 应用残差连接并缩放
         hidden_states = residual + hidden_states * (self.scale_depth / math.sqrt(self.num_hidden_layers))
 
-        # Fully Connected
         residual = hidden_states
+        # 对 attention 结果归一化
         hidden_states = self.post_attention_layernorm(hidden_states)
 
         hidden_states = self.mlp(hidden_states)
+        # 应用残差连接并缩放
         hidden_states = residual + hidden_states * (self.scale_depth / math.sqrt(self.num_hidden_layers))
 
         outputs = (hidden_states,)
@@ -359,15 +413,6 @@ class MiniCPMModel(MiniCPMPreTrainedModel):
             module.weight.data.normal_(mean=0.0, std=std)
             if module.padding_idx is not None:
                 module.weight.data[module.padding_idx].zero_()
-
-        # if _init_weights:
-        #     # Initialize weights
-        #     self.apply(self._init_weights)
-            
-        #     # Tie weights should be skipped when not initializing all weights
-        #     # since from_pretrained(...) calls tie weights anyways
-        #     self.tie_weights()
-            
             
     def get_input_embeddings(self):
         return self.embed_tokens
@@ -395,7 +440,6 @@ class MiniCPMModel(MiniCPMPreTrainedModel):
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        # retrieve input_ids and inputs_embeds
         if input_ids is not None and inputs_embeds is not None:
             raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
         elif input_ids is not None:
@@ -408,13 +452,8 @@ class MiniCPMModel(MiniCPMPreTrainedModel):
         past_key_values_length = 0
         
         if use_cache:
-            if past_key_values is None:
-                past_key_values_length = 0
-                past_key_values = tuple([None] * len(self.h))
-            else:
-                past_key_values_length = past_key_values[0][0].size(-2)
-                
-            past_key_values_length = past_key_values[0][0].shape[0]
+            if past_key_values is not None and len(past_key_values) > 0 and len(past_key_values[0]) > 0 and len(past_key_values[0][0].shape) > 2:
+                past_key_values_length = past_key_values[0][0].shape[-2]
 
         if position_ids is None:
             device = input_ids.device if input_ids is not None else inputs_embeds.device
@@ -426,7 +465,8 @@ class MiniCPMModel(MiniCPMPreTrainedModel):
         if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(input_ids) * self.config.scale_emb
 
-
+        attention_mask = prepare_4d_causal_attention_mask(attention_mask, seq_length, past_key_values_length, inputs_embeds.dtype, inputs_embeds.device)
+        
         # embed positions
         hidden_states = inputs_embeds
 
@@ -455,10 +495,10 @@ class MiniCPMModel(MiniCPMPreTrainedModel):
 
             if output_attentions:
                 all_self_attns += (layer_outputs[1],)
-
+        # 对最终的结果归一化
         hidden_states = self.norm(hidden_states)
 
-        # add hidden states from the last decoder layer
+        # 添加最后一个解码器层的隐藏状态
         if output_hidden_states:
             all_hidden_states += (hidden_states,)
 
@@ -524,7 +564,7 @@ class MiniCPMForCausalLM(MiniCPMPreTrainedModel):
         )
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        # decoder outputs consists of (dec_features, layer_state, dec_hidden, dec_attn)
+        # 调用模型
         outputs = self.model(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -536,22 +576,24 @@ class MiniCPMForCausalLM(MiniCPMPreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-
-        hidden_states = outputs[0]
+        
+        # 获取最后一层隐藏状态，并通过线性层（lm_head）转换为logits
+        hidden_states = outputs.last_hidden_state
         logits = self.lm_head(hidden_states / (self.config.hidden_size / self.config.dim_model_base))
         logits = logits.float()
-
+        
         loss = None
+        # 如果存在标签，则进行损失计算
         if labels is not None:
-            # Shift so that tokens < n predict n
+            # 对logits和labels进行错位，以便预测下一个token
             shift_logits = logits[..., :-1, :].contiguous()
             shift_labels = labels[..., 1:].contiguous()
-            # Flatten the tokens
+            # 为交叉熵损失计算准备，将tokens展平
             loss_fct = CrossEntropyLoss()
             shift_logits = shift_logits.view(-1, self.config.vocab_size)
             shift_labels = shift_labels.view(-1)
-            # Enable model parallelism
             shift_labels = shift_labels.to(shift_logits.device)
+            # 计算交叉熵损失
             loss = loss_fct(shift_logits, shift_labels)
 
         if not return_dict:
@@ -567,47 +609,37 @@ class MiniCPMForCausalLM(MiniCPMPreTrainedModel):
         )
 
     def prepare_inputs_for_generation(
-        self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
-    ):
-        if past_key_values is not None:
+            self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
+        ):
+        # 调整输入以匹配注意力掩码或过去的键值长度
+        def adjust_input_ids(input_ids, attention_mask, past_length):
+            if attention_mask is not None and attention_mask.shape[1] > input_ids.shape[1]:
+                return input_ids[:, -(attention_mask.shape[1] - past_length):]
+            elif past_length < input_ids.shape[1]:
+                return input_ids[:, past_length:]
+            return input_ids
 
+        # 根据 kv 缓存的长度调整输入
+        if past_key_values is not None and len(past_key_values) > 0 and len(past_key_values[0]) > 0 and len(past_key_values[0][0].shape) > 2:
             cache_length = past_length = past_key_values[0][0].shape[2]
             max_cache_length = None
 
-            # Keep only the unprocessed tokens:
-            # 1 - If the length of the attention_mask exceeds the length of input_ids, then we are in a setting where
-            # some of the inputs are exclusivelly passed as part of the cache (e.g. when passing input_embeds as
-            # input)
-            if attention_mask is not None and attention_mask.shape[1] > input_ids.shape[1]:
-                input_ids = input_ids[:, -(attention_mask.shape[1] - past_length) :]
-            # 2 - If the past_length is smaller than input_ids', then input_ids holds all input tokens. We can discard
-            # input_ids based on the past_length.
-            elif past_length < input_ids.shape[1]:
-                input_ids = input_ids[:, past_length:]
-            # 3 - Otherwise (past_length >= input_ids.shape[1]), let's assume input_ids only has unprocessed tokens.
+            input_ids = adjust_input_ids(input_ids, attention_mask, past_length)
 
-            # If we are about to go beyond the maximum cache length, we need to crop the input attention mask.
-            if (
-                max_cache_length is not None
-                and attention_mask is not None
-                and cache_length + input_ids.shape[1] > max_cache_length
-            ):
+            if max_cache_length is not None and attention_mask is not None and cache_length + input_ids.shape[1] > max_cache_length:
                 attention_mask = attention_mask[:, -max_cache_length:]
-
+        
+        # 按照注意力掩码生成位置ID
         position_ids = kwargs.get("position_ids", None)
         if attention_mask is not None and position_ids is None:
-            # create position_ids on the fly for batch generation
             position_ids = attention_mask.long().cumsum(-1) - 1
             position_ids.masked_fill_(attention_mask == 0, 1)
             if past_key_values:
-                position_ids = position_ids[:, -input_ids.shape[1] :]
-
-        # if `inputs_embeds` are passed, we only want to use them in the 1st generation step
-        if inputs_embeds is not None and past_key_values is None:
-            model_inputs = {"inputs_embeds": inputs_embeds}
-        else:
-            model_inputs = {"input_ids": input_ids}
-
+                position_ids = position_ids[:, -input_ids.shape[1]:]
+       
+        # 更新模型输入
+        model_inputs = {"inputs_embeds": inputs_embeds} if inputs_embeds is not None and past_key_values is None else {"input_ids": input_ids}
+        
         model_inputs.update(
             {
                 "position_ids": position_ids,
@@ -646,19 +678,49 @@ class MiniCPMForCausalLM(MiniCPMPreTrainedModel):
     
         '''进行推理'''
     @torch.no_grad()
-    def generate(self, input_ids, max_new_tokens=1024, temperature=1.0, top_k=None):        
-        # 预先分配输出序列空间
-        output_ids = input_ids
+    def generate(self, input_ids, max_new_tokens=1024, temperature=1.0, top_k=None, use_cache=False, past_key_values=None, tokenizer=None, do_sample=False, **model_kwargs):
+        if use_cache and past_key_values is None:
+            # 初始化 kv 缓存
+            past_key_values = ([], [])
+            model_kwargs["past_key_values"] = past_key_values
+        batch_size = input_ids.size(0)
+        # 初始化完成标志和未完成序列标志
+        finished = torch.zeros(batch_size, dtype=torch.bool).to(input_ids.device)
+        unfinished_sequences = torch.ones(batch_size, dtype=torch.bool).to(input_ids.device)
+        # 获取 pad_token_id 用于填充
+        pad_token_id = tokenizer.pad_token_id  # 提前获取 pad_token_id
+
         for _ in range(max_new_tokens):
-            logits = self(output_ids).logits
-            logits = logits[:, -1, :] / temperature  # 控制多样性
+            # 准备生成的输入
+            model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
+
+            logits = self(**model_inputs).logits[:, -1, :] / temperature  # Apply temperature
             
             if top_k is not None:
                 indices_to_remove = logits < torch.topk(logits, top_k)[0][..., -1, None]
                 logits[indices_to_remove] = -float('Inf')
+    
+            if do_sample:
+                probs = F.softmax(logits, dim=-1)
+                next_tokens = torch.multinomial(probs, num_samples=1).squeeze(1)
+            else:
+                next_tokens = torch.argmax(logits, dim=-1)
             
-            probs = F.softmax(logits, dim=-1)
-            idx_next = torch.multinomial(probs, num_samples=1)
-            output_ids = torch.cat((output_ids, idx_next), dim=1)
-        
-        return output_ids
+            # 更新未完成序列的 next_tokens 
+            next_tokens = next_tokens * unfinished_sequences + pad_token_id * (~unfinished_sequences)        
+            input_ids = torch.cat([input_ids, next_tokens[:, None]], dim=-1)
+            if "attention_mask" in model_kwargs:
+                # 更新 attention_mask
+                attention_mask = model_kwargs["attention_mask"]
+                model_kwargs["attention_mask"] = torch.cat(
+                    [attention_mask, attention_mask.new_ones((attention_mask.shape[0], 1))], dim=-1
+                )
+            # 更新完成和未完成的序列标志
+            finished |= (next_tokens.squeeze(-1) == tokenizer.eos_token_id)
+            unfinished_sequences &= ~finished
+            
+            # 如果所有序列都完成，则停止生成
+            if finished.all():
+                break
+
+        return input_ids

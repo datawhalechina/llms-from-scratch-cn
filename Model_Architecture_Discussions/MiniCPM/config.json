@@ -3,9 +3,8 @@
     "architectures": [
         "MiniCPMForCausalLM"
     ],
-    "do_sample": true,
-    "top_p": 0.8,
-    "temperature": 0.8,
+    "do_sample": false,
+    "temperature": 1,
     "bos_token_id": 1,
     "eos_token_id": 2,
     "hidden_act": "silu",
@@ -24,5 +23,6 @@
     "vocab_size": 122753,
     "scale_emb": 12,
     "dim_model_base": 256,
-    "scale_depth": 1.4
+    "scale_depth": 1.4,
+    "_attn_implementation": "eager"
 }
