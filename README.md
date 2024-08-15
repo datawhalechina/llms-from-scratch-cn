@@ -93,6 +93,7 @@
 | RWKV V5 | [rwkv-v5.ipynb](./Model_Architecture_Discussions/rwkv-v5/rwkv-v5-guide.ipynb) | [@Ethan-Chen-plus](https://github.com/Ethan-Chen-plus) |
 | RWKV V6 | [rwkv-v6.ipynb](./Model_Architecture_Discussions/rwkv-v6/rwkv-v6-guide.ipynb) | [@Ethan-Chen-plus](https://github.com/Ethan-Chen-plus) |
 | ChatGLM4 | [chatglm4.ipynb](./Model_Architecture_Discussions/ChatGLM4/chatglm4-guide.ipynb) | [@Ethan-Chen-plus](https://github.com/Ethan-Chen-plus) |
+| MiniCPM | [minicpm.ipynb](./Model_Architecture_Discussions/MiniCPM/MiniCPM.ipynb) | [@0-yy-0](https://github.com/0-yy-0) |
 
 
 ---
@@ -157,7 +158,7 @@
 | 邹雨衡 | 第3章贡献者 |              ||
 | 曹 妍  | 第3章贡献者 |              |[@SamanthaTso](https://github.com/SamanthaTso)|
 | 陈嘉诺 | 第4章贡献者 |   广州大学    |[@Tangent-90C](https://github.com/Tangent-90C)|
-| 高立业 | 第4章贡献者 |              ||
+| 高立业 | 第4章贡献者 |              |[@0-yy-0](https://github.com/0-yy-0)|
 | 蒋文力 | 第4章贡献者 |              |[@morcake](https://github.com/morcake)|
 | 丁悦 | 第5章贡献者 | 哈尔滨工业大学（威海）|[@dingyue772](https://github.com/dingyue772)|
 | 周景林 | 附录贡献者  |              |[@Beyondzjl](https://github.com/Beyondzjl)|
