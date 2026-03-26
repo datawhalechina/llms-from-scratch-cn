@@ -23,7 +23,7 @@ from transformers.modeling_outputs import (
 from transformers.modeling_utils import PreTrainedModel
 from transformers.utils import logging
 from transformers.generation.logits_process import LogitsProcessor
-from transformers.generation.utils import LogitsProcessorList, StoppingCriteriaList, GenerationConfig, ModelOutput
+from transformers.generation.utils import LogitsProcessorList, StoppingCriteriaList, GenerationConfig, ModelOutput, GenerationMixin
 
 from configuration_chatglm import ChatGLMConfig
 
@@ -793,7 +793,7 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
         )
 
 
-class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
+class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel, GenerationMixin):
     def __init__(self, config: ChatGLMConfig, empty_init=True, device=None):
         super().__init__(config)
 
@@ -806,11 +806,10 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             outputs: ModelOutput,
             model_kwargs: Dict[str, Any],
             is_encoder_decoder: bool = False,
-            standardize_cache_format: bool = False,
     ) -> Dict[str, Any]:
         # update past_key_values
-        model_kwargs["past_key_values"] = self._extract_past_from_model_output(
-            outputs, standardize_cache_format=standardize_cache_format
+        _, model_kwargs["past_key_values"] = self._extract_past_from_model_output(
+            outputs
         )
 
         # update attention mask
