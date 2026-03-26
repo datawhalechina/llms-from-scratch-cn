@@ -149,7 +149,7 @@
 
 | 姓名   | 职责        | 简介         | GitHub |
 | :-----:| :----------:| :-----------:|:------:|
-| 陈可为 | 项目负责人  | 华中科技大学 |[@Ethan-Chen-plus](https://github.com/Ethan-Chen-plus)|
+| 陈可为 | 项目负责人  | 中国科学院大学 |[@Ethan-Chen-plus](https://github.com/Ethan-Chen-plus)|
 | 王训志 | 第2章贡献者 | 南开大学     |[@aJupyter](https://github.com/aJupyter)|
 | 汪健麟 | 第2章贡献者 |              ||
 | Aria  | 第2章贡献者 |             |[@ariafyy](https://github.com/ariafyy)|
